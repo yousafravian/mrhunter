@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Example Chrome Extension",
+  "version": "1.0",
+  "description": "An example Chrome extension to demonstrate the development cycle.",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["libs/realm-web.js"],
+      "matches": ["<all_urls>"]
+    }
+  ], 
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+  
+}
