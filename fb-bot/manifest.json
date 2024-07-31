@@ -10,14 +10,21 @@
     "default_popup": "popup.html"
   },
   "permissions": [
+    "tabs",
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "https://www.facebook.com/*"
   ],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
+      "run_at": "document_end"
+    }, 
+    {
+      "matches": ["https://www.facebook.com/profile.php?id=61561043474716&sk=reviews"],
+      "js": ["page_script.js"],
       "run_at": "document_end"
     }
   ]
