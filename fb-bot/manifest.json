@@ -23,7 +23,7 @@
       "run_at": "document_end"
     }, 
     {
-      "matches": ["https://www.facebook.com/profile.php?id=61561043474716&sk=reviews"],
+      "matches": ["https://www.facebook.com/profile.php?id=61553532391727&sk=reviews"],
       "js": ["page_script.js"],
       "run_at": "document_end"
     }
