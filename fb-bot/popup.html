@@ -6,40 +6,114 @@
     <title>Extension Popup</title>
     <style>
         body {
-            margin: 0;
             font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #cfcfcf;
+            margin: 0;
+            padding: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        #loader {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 200px;
-            background: linear-gradient(135deg, #72EDF2 10%, #5151E5 100%);
+            height: 100vh;
         }
-        .container {
-            text-align: center;
+        #loader div {
+            border: 4px solid #333;
+            border-top: 4px solid #cfcfcf;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
         }
-        .button {
-            background-color: #ff7f50;
-            color: white;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #content {
+            display: none;
+        }
+        header {
+            margin-bottom: 20px;
+        }
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header-content h1, .header-content p {
+            margin: 5px 0;
+        }
+        button {
+            background-color: #333;
             border: none;
-            padding: 15px 30px;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
             font-size: 16px;
-            border-radius: 25px;
+            margin: 4px 2px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s, transform 0.3s;
+            border-radius: 4px;
         }
-        .button:hover {
-            background-color: #ff6347;
-            transform: translateY(-2px);
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #444;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+        }
+        td {
+            background-color: #2e2e2e;
+        }
+        .login-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .login-container button {
+            width: 100%;
         }
     </style>
-</head> 
+</head>
 <body>
-    <div class="container">
-        <button id="activate" class="button">Activate</button>
-        <pre id="output"></pre>
+    <div id="loader">
+        <div></div>
     </div>
-    
-  <script src="popup.js"></script>  
+    <div id="content">
+        <header>
+            <div class="header-content">
+                <div class="dropdown">
+                    <select id="profiles-dropdown"></select>
+                </div>
+            </div>
+        </header>
+        <div class="login-container">
+            <button id="login-button">Login</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Scraped Users</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Rows will be added dynamically here -->
+            </tbody>
+        </table>
+    </div>
+    <script src="popup.js"></script>
 </body>
 </html>

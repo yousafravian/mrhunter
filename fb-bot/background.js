@@ -1,87 +1,71 @@
-chrome.runtime.onInstalled.addListener(() => {
-  console.log("Extension installed");
-});
+let profiles = [];
+let pages = [];
 
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (message.action === "fetchData") {
     try {
-      const [credentialsResponse, pagesResponse] = await Promise.all([
+      const [credentialsResponse, pagesResponse, scrapedUsersCountResponse] = await Promise.all([
         fetch("http://localhost:3000/credentials"),
-        fetch("http://localhost:3000/pages")
+        fetch("http://localhost:3000/pages"),
+        fetch("http://localhost:3000/scraped_users/groupByPageDomain")
       ]);
 
       if (!credentialsResponse.ok) {
-        throw new Error("Network response was not ok: " + credentialsResponse.statusText);
+        throw new Error(
+          "Network response was not ok: " + credentialsResponse.statusText
+        );
       }
       if (!pagesResponse.ok) {
-        throw new Error("Network response was not ok: " + pagesResponse.statusText);
+        throw new Error(
+          "Network response was not ok: " + pagesResponse.statusText
+        );
       }
 
-      const [data, pageUrls] = await Promise.all([
+      if (!scrapedUsersCountResponse.ok) {
+        throw new Error(
+          "Network response was not ok: " + pagesResponse.statusText
+        );
+      }
+
+      [profiles, pages, scrapedUsersCount] = await Promise.all([
         credentialsResponse.json(),
-        pagesResponse.json()
+        pagesResponse.json(),
+        scrapedUsersCountResponse.json()
       ]);
 
-      if (data.length === 0) {
+      if (profiles.length === 0) {
         throw new Error("No data received from the API");
       }
-      if (pageUrls.length === 0) {
+      if (pages.length === 0) {
         throw new Error("No data received from the API");
       }
-
-      console.log(data, pageUrls);
-
-      const credentials = {
-        action: "login",
-        email: data[0].email,
-        password: data[0].password,
-      };
       
-      chrome.tabs.sendMessage(message.tabId, credentials, (msgResponse) => {
-        if (chrome.runtime.lastError) {
-          console.error("Error sending message to content script:", chrome.runtime.lastError.message);
-          sendResponse({ success: false, error: chrome.runtime.lastError.message });
-        } else if (msgResponse && msgResponse.success) {
-          console.log("Message sent with email and password");
-          sendResponse({ success: true });
-
-          // Uncomment and use the following listeners as needed.
-          // chrome.tabs.onUpdated.addListener(function onUpdated(tabId, changeInfo, tab) {
-          //   if (tabId === message.tabId && changeInfo.status === "complete" && tab.url.includes("facebook.com")) {
-          //     console.log("login tab updated");
-          //     chrome.tabs.sendMessage(tabId, {
-          //       action: "search",
-          //       query: "Wild Duck Fishing Room",
-          //       tabId: message.tabId,
-          //     });
-          //     chrome.tabs.onUpdated.removeListener(onUpdated); // Remove listener to prevent repeated searches
-          //   }
-          // });
-
-          // chrome.tabs.onUpdated.addListener(function onUpdated(tabId, changeInfo, tab) {
-          //   if (tabId === message.tabId && changeInfo.status === "complete" && tab.url.includes("facebook.com")) {
-          //     console.log("login tab updated");
-          //     console.log(pageUrls);
-          //     pageUrls.forEach(link => {
-          //       chrome.tabs.create({ url: link.link }, (tab) => {
-          //         console.log(`New tab created with URL: ${link.link}`);
-          //         sendResponse({ success: true, tabId: tab.id });
-          //       });
-          //     });
-          //     chrome.tabs.onUpdated.removeListener(onUpdated); // Remove listener to prevent repeated searches
-          //   }
-          // });
-
-        } else {
-          const errorMsg = msgResponse ? msgResponse.error : "No response from content script";
-          console.error("Error:", errorMsg);
-          sendResponse({ success: false, error: errorMsg });
-        }
+      chrome.runtime.sendMessage({
+        action: "data",
+        profiles: profiles,
+        pages: pages,
+        scrapedUsersCount: scrapedUsersCount
       });
+      console.log(profiles);
+      console.log(pages);
+      console.log(scrapedUsersCount);
     } catch (error) {
       console.error("Error:", error);
-      sendResponse({ success: false, error: error.message });
     }
-    return true; // Indicate that we will send a response asynchronously
+  } else if (message.action === "startScraping" && message.link) {
+    chrome.tabs.create({ url: message.link }, function(tab) {
+      chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+          if (tabId === tab.id && changeInfo.status === 'complete') {
+              chrome.tabs.sendMessage(tab.id, { action: "startScraping" });
+          }
+      });
+  });
+
+  } else if (message.action === "login" && message.email) {
+    const profile = profiles.find(profile => profile.email === message.email);
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, { action: "login", email: profile.email, password: profile.password});
+    });
   }
 });
+

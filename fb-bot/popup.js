@@ -1,31 +1,113 @@
-document.getElementById("activate").addEventListener("click", () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs.length > 0) {
-      const tabId = tabs[0].id;
-      chrome.runtime.sendMessage(
-        { action: "fetchData", tabId: tabId },
-        (response) => {
-          const output = document.getElementById("output");
-          if (chrome.runtime.lastError) {
-            console.error(
-              "Error handling response:",
-              chrome.runtime.lastError.message
-            );
-            output.textContent = "Error: " + chrome.runtime.lastError.message;
-          } else if (response && response.success) {
-            console.log("Data fetched and message sent to content script");
-            output.textContent =
-              "Success: Data fetched and sent to content script.";
-          } else {
-            console.error(
-              "Error:",
-              response ? response.error : "No response received"
-            );
-            output.textContent =
-              "Error: " + (response ? response.error : "No response received");
-          }
-        }
-      );
+function populateDropdown(profile) {
+  const dropdown = document.getElementById('profiles-dropdown');
+
+  const option = document.createElement('option');
+  option.value = profile.email;
+  option.textContent = profile.email;
+  dropdown.appendChild(option);
+}
+
+function addRow(name, count, link) {
+  const tableBody = document.getElementById("table-body");
+
+  // Create table row
+  const row = document.createElement("tr");
+
+  // Create cells
+  const nameCell = document.createElement("td");
+  nameCell.textContent = name;
+
+  const countCell = document.createElement("td");
+  countCell.textContent = count;
+  countCell.classList.add("count");
+
+  const actionCell = document.createElement("td");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.classList.add("hidden");
+  input.id = link;
+
+  const button = document.createElement("button");
+  button.textContent = "Scrape";
+  button.onclick = function () {
+    handleButtonClick(input.id);
+  };
+
+  // Append input and button to action cell
+  actionCell.appendChild(input);
+  actionCell.appendChild(button);
+
+  // Append cells to row
+  row.appendChild(nameCell);
+  row.appendChild(countCell);
+  row.appendChild(actionCell);
+
+  // Append row to table body
+  tableBody.appendChild(row);
+}
+
+function handleButtonClick(inputId) {
+  const pageLink = inputId;
+  console.log(pageLink);
+  chrome.runtime.sendMessage({ action: "startScraping", link: pageLink });
+}
+
+
+function updateUI() {
+  chrome.storage.local.get(null, (result) => {
+    const loginButton = document.getElementById("login-button");
+    if (Object.keys(result).length === 0) {
+      if (loginButton) {
+        loginButton.style.display = 'block'; // Show the login button
+      }
+    } else if (result.loggedIn) {
+      if (loginButton) {
+        loginButton.style.display = 'none'; // Hide the login button
+      }
+    } else {
+      if (loginButton) {
+        loginButton.style.display = 'block'; // Show the login button
+      }
     }
   });
+}
+
+function updateScrapeCount(inputId, newCount) {
+  const rows = document.querySelectorAll('#table-body tr');
+  rows.forEach(row => {
+      const input = row.querySelector('input[type="text"]');
+      if (input && input.id === inputId) {
+          // Update the count value in the corresponding column
+          const countCell = row.querySelector('.count');
+          if (countCell) {
+              countCell.textContent = newCount;
+          }
+      }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  chrome.runtime.sendMessage({ action: "fetchData" });
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    if (message.action === "data") {
+      message.pages.forEach((page) => {
+        addRow(page.name, 0, page.link);
+      });
+      message.profiles.forEach((profile) => {
+        populateDropdown(profile);
+      });
+      message.scrapedUsersCount.forEach(item => {
+        updateScrapeCount(item.pageDomain, item.scraped_users); 
+      });
+    }
+    
+  });
+  document.getElementById("login-button").addEventListener("click", () => {
+    const selectedEmail = document.getElementById("profiles-dropdown").value;
+    chrome.runtime.sendMessage({ action: "login", email: selectedEmail} );
+  });
+
+  
 });

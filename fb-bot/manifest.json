@@ -16,14 +16,9 @@
     "scripting",
     "https://www.facebook.com/*"
   ],
-  "content_scripts": [
+  "content_scripts": [ 
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_end"
-    }, 
-    {
-      "matches": ["https://www.facebook.com/profile.php?id=61553532391727&sk=reviews"],
+      "matches": ["https://www.facebook.com/*"],
       "js": ["page_script.js"],
       "run_at": "document_end"
     }
