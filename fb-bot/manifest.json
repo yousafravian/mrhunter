@@ -1,23 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "Example Chrome Extension",
+  "name": "Scrape Bot",
   "version": "1.0",
-  "description": "An example Chrome extension to demonstrate the development cycle.",
+  "description": "Bot to scrape user profiles off of a page",
   "background": {
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "extension-icon.png"
+    "default_icon": "scrapeBot2.png"
   },
-  "permissions": [
-    "tabs",
-    "activeTab",
-    "storage",
-    "scripting",
-    "https://www.facebook.com/*"
-  ],
-  "content_scripts": [ 
+  "permissions": ["tabs", "activeTab", "storage", "scripting"],
+  "host_permissions": ["https://*.facebook.com/*", "http://localhost:3000/*"],
+  "content_scripts": [
     {
       "matches": ["https://www.facebook.com/*"],
       "js": ["page_script.js"],

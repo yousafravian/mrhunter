@@ -8,27 +8,27 @@ function populateDropdown(profile) {
 }
 
 function addRow(name, count, link) {
-  const tableBody = document.getElementById("table-body");
+  const tableBody = document.getElementById('table-body');
 
   // Create table row
-  const row = document.createElement("tr");
+  const row = document.createElement('tr');
 
   // Create cells
-  const nameCell = document.createElement("td");
+  const nameCell = document.createElement('td');
   nameCell.textContent = name;
 
-  const countCell = document.createElement("td");
+  const countCell = document.createElement('td');
   countCell.textContent = count;
-  countCell.classList.add("count");
+  countCell.classList.add('count');
 
-  const actionCell = document.createElement("td");
-  const input = document.createElement("input");
-  input.type = "text";
-  input.classList.add("hidden");
+  const actionCell = document.createElement('td');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.classList.add('hidden');
   input.id = link;
 
-  const button = document.createElement("button");
-  button.textContent = "Scrape";
+  const button = document.createElement('button');
+  button.textContent = 'Scrape';
   button.onclick = function () {
     handleButtonClick(input.id);
   };
@@ -49,13 +49,12 @@ function addRow(name, count, link) {
 function handleButtonClick(inputId) {
   const pageLink = inputId;
   console.log(pageLink);
-  chrome.runtime.sendMessage({ action: "startScraping", link: pageLink });
+  chrome.runtime.sendMessage({ action: 'startScraping', link: pageLink });
 }
-
 
 function updateUI() {
   chrome.storage.local.get(null, (result) => {
-    const loginButton = document.getElementById("login-button");
+    const loginButton = document.getElementById('login-button');
     if (Object.keys(result).length === 0) {
       if (loginButton) {
         loginButton.style.display = 'block'; // Show the login button
@@ -74,40 +73,69 @@ function updateUI() {
 
 function updateScrapeCount(inputId, newCount) {
   const rows = document.querySelectorAll('#table-body tr');
-  rows.forEach(row => {
-      const input = row.querySelector('input[type="text"]');
-      if (input && input.id === inputId) {
-          // Update the count value in the corresponding column
-          const countCell = row.querySelector('.count');
-          if (countCell) {
-              countCell.textContent = newCount;
-          }
+  rows.forEach((row) => {
+    const input = row.querySelector('input[type="text"]');
+    if (input && input.id === inputId) {
+      // Update the count value in the corresponding column
+      const countCell = row.querySelector('.count');
+      if (countCell) {
+        countCell.textContent = newCount;
       }
+    }
   });
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  chrome.runtime.sendMessage({ action: "fetchData" });
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    document.getElementById("loader").style.display = "none";
-    document.getElementById("content").style.display = "block";
-    if (message.action === "data") {
-      message.pages.forEach((page) => {
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const [profiles, pages, scrapedUsersCount] = await Promise.all([
+      fetchData('http://localhost:3000/credentials'),
+      fetchData('http://localhost:3000/pages'),
+      fetchData('http://localhost:3000/scraped_users/groupByPageDomain')
+    ]);
+
+    console.log(scrapedUsersCount);
+
+    if (
+      Array.isArray(profiles) &&
+      Array.isArray(pages) &&
+      Array.isArray(scrapedUsersCount)
+    ) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+      pages.forEach((page) => {
         addRow(page.name, 0, page.link);
       });
-      message.profiles.forEach((profile) => {
+      profiles.forEach((profile) => {
         populateDropdown(profile);
       });
-      message.scrapedUsersCount.forEach(item => {
-        updateScrapeCount(item.pageDomain, item.scraped_users); 
+      scrapedUsersCount.forEach((item) => {
+        updateScrapeCount(item.pageDomain, item.scraped_users);
       });
     }
-    
-  });
-  document.getElementById("login-button").addEventListener("click", () => {
-    const selectedEmail = document.getElementById("profiles-dropdown").value;
-    chrome.runtime.sendMessage({ action: "login", email: selectedEmail} );
-  });
-
-  
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
 });
+
+document.getElementById('startBot').addEventListener('click', async () => {
+  try {
+    const response = await fetch('http://localhost:3000/credentials');
+    const credentials = await response.json();
+    const selectedEmail = document.getElementById('profiles-dropdown').value;
+    const credentialsToLogin = credentials.find(
+      (credentials) => credentials.email === selectedEmail
+    );
+
+    chrome.runtime.sendMessage({ action: 'startBot', credentialsToLogin });
+  } catch (error) {
+    console.error('Error logging in:', error);
+  }
+});
+
+async function fetchData(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch data from ${url}`);
+  }
+  return response.json();
+}
