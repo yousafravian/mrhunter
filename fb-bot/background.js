@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         chrome.tabs.sendMessage(tabs[0].id, {
           action: 'showFinalAlert',
           message:
-            'The bot has halted due to an error. Please check admin email for details.'
+            'The bot has halted due to an error'
         });
       });
     }

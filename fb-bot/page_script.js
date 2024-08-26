@@ -84,7 +84,7 @@ async function getAllProfileLinks(startNum, foundProfiles, pageDomain) {
 
   while (true) {
     try {
-      const profileXpath = `/html/body/div[1]/div/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div[4]/div/div/div/div[${num}]/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[2]/div/div[2]/div/div[1]/span/h2/span/strong[1]/span/a`;
+      const profileXpath = `/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div[4]/div/div/div/div[${num}]/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[2]/div/div[2]/div/div[1]/span/h2/span/strong[1]/span/a`;
       const postXpath = `/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div[4]/div/div/div/div[${num}]/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[3]/div/div/span/div`;
 
       const profile = getElementByXPath(profileXpath);
@@ -109,7 +109,7 @@ async function getAllProfileLinks(startNum, foundProfiles, pageDomain) {
           profileLinks.push(profile.href);
           foundProfiles.add(profile.href);
           console.log(`Found profile link: ${profile.href} at num: ${num}`);
-          const timestamp = Date.now();
+          const timestamp = new Date();
 
           await sendProfileLinksToServer(
             profile.href,
@@ -304,6 +304,8 @@ async function extractProfileLinks() {
     console.log(result);
     profileLinks.forEach((link) => allProfileLinks.add(link));
     lastProcessedNum = newLastProcessedNum;
+
+    await delay(2000);
 
     while (!halted && noNewProfileAttempts < maxScrollAttempts) {
       const scrollAmount = getRandomNumber(2300, 4000);
