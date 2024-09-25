@@ -87,16 +87,12 @@ function updateScrapeCount(inputId, newCount) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const [profiles, pages, scrapedUsersCount] = await Promise.all([
-      fetchData('http://localhost:3000/credentials'),
+    const [pages, scrapedUsersCount] = await Promise.all([
       fetchData('http://localhost:3000/pages'),
       fetchData('http://localhost:3000/scraped_users/groupByPageDomain')
     ]);
 
-    console.log(scrapedUsersCount);
-
     if (
-      Array.isArray(profiles) &&
       Array.isArray(pages) &&
       Array.isArray(scrapedUsersCount)
     ) {
@@ -104,9 +100,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('content').style.display = 'block';
       pages.forEach((page) => {
         addRow(page.name, 0, page.link);
-      });
-      profiles.forEach((profile) => {
-        populateDropdown(profile);
       });
       scrapedUsersCount.forEach((item) => {
         updateScrapeCount(item.pageDomain, item.scraped_users);
@@ -119,13 +112,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 document.getElementById('startBot').addEventListener('click', async () => {
   try {
-    const response = await fetch('http://localhost:3000/credentials');
-    const credentials = await response.json();
-    const selectedEmail = document.getElementById('profiles-dropdown').value;
-    const credentialsToLogin = credentials.find(
-      (credentials) => credentials.email === selectedEmail
-    );
-
+    const credentialsToLogin = {
+      email: "",
+      password: ""
+    };
     chrome.runtime.sendMessage({ action: 'startBot', credentialsToLogin });
   } catch (error) {
     console.error('Error logging in:', error);
