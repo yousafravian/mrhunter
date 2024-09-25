@@ -92,10 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       fetchData('http://localhost:3000/scraped_users/groupByPageDomain')
     ]);
 
-    if (
-      Array.isArray(pages) &&
-      Array.isArray(scrapedUsersCount)
-    ) {
+    if (Array.isArray(pages) && Array.isArray(scrapedUsersCount)) {
       document.getElementById('loader').style.display = 'none';
       document.getElementById('content').style.display = 'block';
       pages.forEach((page) => {
@@ -111,11 +108,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 document.getElementById('startBot').addEventListener('click', async () => {
+  const email = '';
   try {
-    const credentialsToLogin = {
-      email: "",
-      password: ""
-    };
+    const credentials = await fetchData(
+      'http://localhost:3000/credentials/getValidationAndScrapingCredentials'
+    );
+    const credentialsToLogin = credentials.find((cred) => cred.email === email);
+    // Send the credentials to background.js to start the bot
     chrome.runtime.sendMessage({ action: 'startBot', credentialsToLogin });
   } catch (error) {
     console.error('Error logging in:', error);
