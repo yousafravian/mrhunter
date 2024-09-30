@@ -110,16 +110,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 document.getElementById('startBot').addEventListener('click', async () => {
   const email = '';
   try {
-    const credentials = await fetchData(
+    const credentialsToLogin = await fetchData(
       `http://localhost:3000/credentials/getValidationAndScrapingCredentials/${email}`
     );
-    const credentialsToLogin = credentials.find((cred) => cred.email === email);
+    if (Object.entries(credentialsToLogin).length === 0) {
+      resetStatus.textContent = "Wait two hours or reset"; // Failure message
+      resetStatus.style.color = "red";
+      resetStatus.style.display = "block";
+      setTimeout(() => {
+        resetStatus.style.display = "none";
+      }, 4000);
+      return;
+    }
     // Send the credentials to background.js to start the bot
     chrome.runtime.sendMessage({ action: 'startBot', credentialsToLogin });
   } catch (error) {
     console.error('Error logging in:', error);
   }
 });
+
+document
+  .getElementById("clearEvaluatedEmails")
+  .addEventListener("click", async () => {
+    const resetStatus = document.getElementById("resetStatus");
+    resetStatus.style.display = "none";
+
+    try {
+      const response = await fetch(
+        "http://localhost:3000/credentials/resetValidationTimestamps",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.text();
+        resetStatus.textContent = "timestamps have been successfully reset!"; // Success message
+        resetStatus.style.color = "green";
+      } else {
+        resetStatus.textContent = "Failed to reset timestamps."; // Failure message
+        resetStatus.style.color = "red";
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      resetStatus.textContent = "An error occurred while resetting timestamps.";
+      resetStatus.style.color = "red";
+    }
+    resetStatus.style.display = "block";
+    setTimeout(() => {
+      resetStatus.style.display = "none";
+    }, 5000);
+  });
 
 async function fetchData(url) {
   const response = await fetch(url);
