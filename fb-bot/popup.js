@@ -111,7 +111,7 @@ document.getElementById('startBot').addEventListener('click', async () => {
   const email = '';
   try {
     const credentials = await fetchData(
-      'http://localhost:3000/credentials/getValidationAndScrapingCredentials'
+      `http://localhost:3000/credentials/getValidationAndScrapingCredentials/${email}`
     );
     const credentialsToLogin = credentials.find((cred) => cred.email === email);
     // Send the credentials to background.js to start the bot
