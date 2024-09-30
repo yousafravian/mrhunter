@@ -73,6 +73,9 @@ function scrollByAmount(amount) {
  * @returns {Promise<{profileLinks: string[], lastProcessedNum: number, halted: boolean}>} - A promise that resolves with the profile links, last processed number, and a flag indicating if scraping was halted.
  */
 async function getAllProfileLinks(startNum, foundProfiles, pageDomain) {
+  const findProfileList = async () => {
+    const arr = [];
+  }
   const profileLinks = [];
   let num = startNum;
   const lastScrapedUsersData = await getLastScrapedUserFromServer();
@@ -84,7 +87,7 @@ async function getAllProfileLinks(startNum, foundProfiles, pageDomain) {
 
   while (true) {
     try {
-      const profileXpath = `/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div[4]/div/div/div/div[${num}]/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[2]/div/div[2]/div/div[1]/span/h2/span/strong[1]/span/a`;
+      const profileXpath = `/html/body/div[1]/div/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div[4]/div/div/div/div[${num}]/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[2]/div/div[2]/div/div[1]/span/h2/span/strong[1]/span/a`;
       const postXpath = `/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div/div[4]/div/div/div/div[${num}]/div/div/div/div/div/div/div/div/div/div[13]/div/div/div[3]/div/div/span/div`;
 
       const profile = getElementByXPath(profileXpath);
