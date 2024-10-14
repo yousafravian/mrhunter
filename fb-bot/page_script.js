@@ -136,16 +136,53 @@ function initializeLinkTracking() {
 }
 
 async function extractDesiredLinks() {
- return new Promise((resolve, reject) => {
-  const divs = document.querySelectorAll('div[aria-label="profile_name"]');
+  //helper function to extract profiles
+ const extractRecommendsParents = async () => {
+  return new Promise((resolve, reject) => {
+   try {
+    // Create a TreeWalker to traverse text nodes
+    const walker = document.createTreeWalker(
+     document.body, // Start from the body or a relevant parent node
+     NodeFilter.SHOW_TEXT, // Only consider text nodes
+     {
+      // Filter to match "recommends" exactly
+      acceptNode: (node) => {
+       if (node.nodeValue && node.nodeValue.trim() === 'recommends') {
+        return NodeFilter.FILTER_ACCEPT;
+       }
+       return NodeFilter.FILTER_REJECT;
+      }
+     }
+    );
+
+    const parentElements = [];
+
+    // Collect parent elements of all matching text nodes
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+     parentElements.push(textNode.parentElement);
+    }
+
+    if (parentElements.length) {
+     resolve(parentElements); // Resolve with the found elements
+    } else {
+     reject(new Error('No matching "recommends" text nodes found.'));
+    }
+   } catch (error) {
+    reject(error); // Handle any unexpected errors
+   }
+  });
+ };
+ return new Promise(async (resolve, reject) => {
+  const arr = await extractRecommendsParents();
   const currentExtractedSet = new Set();
   const newLinks = [];
 
   const profilePattern = /facebook\.com\/profile\.php/;
   const usernamePattern = /facebook\.com\/[a-zA-Z0-9.]+(?=\?|$)/;
 
-  divs.forEach((div) => {
-   const anchorTag = div.querySelector('a');
+  arr.forEach((span) => {
+   const anchorTag = span.querySelector('a');
    let href = anchorTag.href;
    let sanitizedHref;
 
@@ -181,8 +218,8 @@ async function simulateHumanScroll(
  credentials,
  config = {
   minScroll: 1000,
-  maxScroll: 3000,
-  maxRetries: 3,
+  maxScroll: 2000,
+  maxRetries: 5,
   delayBetweenScrolls: 1000,
   scrollTimeout: 2500
  }
@@ -562,13 +599,6 @@ async function incrementPagesScraped(email) {
   },
   body: JSON.stringify({ email }) // Send the email in the request body
  })
-  .then((response) => response.json())
-  .then((data) => {
-   console.log('Updated document:', data);
-  })
-  .catch((error) => {
-   console.error('Error:', error);
-  });
 }
 
 async function waitForElement(
