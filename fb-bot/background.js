@@ -78,7 +78,7 @@ async function loginToFacebook(credentials) {
  await navigateToFacebook();
  await delayRandom(); // Simulate delay for human-like interaction
 
- return new Promise((resolve, reject) => {
+ return new Promise(async (resolve, reject) => {
   chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
    const tabId = tabs[0].id;
    try {
@@ -112,7 +112,7 @@ async function loginToFacebook(credentials) {
         });
         markDocumentInUse(credentials.email);
         chrome.tabs.sendMessage(
-         getCurrentTabId(),
+         tabId,
          { action: 'checkCaptcha' },
          async (response) => {
           if (response?.status !== 'action_completed')
