@@ -351,6 +351,7 @@ async function simulateHumanScroll(
 
   // Start scrolling and extracting process
   scrollAndExtract();
+  resolve();
  });
 }
 
