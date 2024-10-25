@@ -111,6 +111,17 @@ async function loginToFacebook(credentials) {
          message: 'Login successful. Starting page extraction.'
         });
         markDocumentInUse(credentials.email);
+        chrome.tabs.sendMessage(
+         currentTabId,
+         { action: 'checkCaptcha' },
+         async (response) => {
+          if (response?.status !== 'action_completed')
+           return reject(new Error('captcha detection failed'));
+          if (response?.captchaExists) {
+           await waitForTabUpdate();
+          }
+         }
+        );
 
         // Resolve the promise
         resolve();

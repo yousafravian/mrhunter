@@ -1,4 +1,13 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+ if (request.action === 'checkCaptcha') {
+  checkCaptcha()
+   .then((result) => {
+    sendResponse({ status: 'action_completed', captchaExists: result });
+   })
+   .catch(() => {
+    sendResponse({ status: 'action_failed' });
+   });
+ }
  if (request.action === 'showRunningAlert' && request.message) {
   removeAllAlerts(); // Remove any existing alerts
   showTemporaryAlert(request.message, 0, true, '#008000'); // Show running alert, keep it on screen
@@ -43,6 +52,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  }
  return true;
 });
+
+async function checkCaptcha() {
+ return new Promise(async (resolve, reject) => {
+  try {
+   const text = 'Enter the characters you see';
+   const bodyText = document.body.innerText || document.body.textContent;
+   const captchaDetected = bodyText.includes(text);
+   if (captchaDetected) {
+    resolve(true);
+   } else {
+    resolve(false);
+   }
+  } catch (error) {
+   console.error('Error detecting captcha: ', error);
+   reject(error);
+  }
+ });
+}
 
 async function logout() {
  const clickElement = async (selector, isXPath = false) => {
@@ -136,7 +163,7 @@ function initializeLinkTracking() {
 }
 
 async function extractDesiredLinks() {
-  //helper function to extract profiles
+ //helper function to extract profiles
  const extractRecommendsParents = async () => {
   return new Promise((resolve, reject) => {
    try {
@@ -598,7 +625,7 @@ async function incrementPagesScraped(email) {
    'Content-Type': 'application/json'
   },
   body: JSON.stringify({ email }) // Send the email in the request body
- })
+ });
 }
 
 async function waitForElement(
