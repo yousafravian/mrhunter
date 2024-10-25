@@ -193,7 +193,8 @@ async function extractDesiredLinks() {
     if (parentElements.length) {
      resolve(parentElements); // Resolve with the found elements
     } else {
-     reject(new Error('No matching "recommends" text nodes found.'));
+    //  reject(new Error('No matching "recommends" text nodes found.'));
+    resolve(null);
     }
    } catch (error) {
     reject(error); // Handle any unexpected errors
@@ -202,6 +203,9 @@ async function extractDesiredLinks() {
  };
  return new Promise(async (resolve, reject) => {
   const arr = await extractRecommendsParents();
+  if (arr === null) {
+    resolve(null)
+  }
   const currentExtractedSet = new Set();
   const newLinks = [];
 
@@ -271,6 +275,9 @@ async function simulateHumanScroll(
 
    try {
     const newLinks = await extractDesiredLinks();
+    if (newLinks === null) {
+      resolve();
+    }
     if (newLinks && newLinks.length > 0) {
      const timestamp = new Date().toISOString();
      await addLinksToServer(newLinks, pageLink, timestamp);
