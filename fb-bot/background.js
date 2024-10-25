@@ -112,7 +112,7 @@ async function loginToFacebook(credentials) {
         });
         markDocumentInUse(credentials.email);
         chrome.tabs.sendMessage(
-         currentTabId,
+         getCurrentTabId(),
          { action: 'checkCaptcha' },
          async (response) => {
           if (response?.status !== 'action_completed')
