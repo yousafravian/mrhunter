@@ -317,7 +317,7 @@ async function simulateHumanScroll(
       console.log('Reached confirmed bottom of the page.');
       await incrementPagesScraped(credentials.email);
       await delay(2000); // Additional delay before resolving
-      return resolve();
+      resolve();
      }
     }
 
@@ -343,7 +343,7 @@ async function simulateHumanScroll(
       console.log('Maximum retries reached, ending extraction.');
       await incrementPagesScraped(credentials.email);
       await delay(2000);
-      return resolve(); // Exit after retries are exhausted
+      resolve(); // Exit after retries are exhausted
      }
     } else {
      lastPosition = currentPosition;
