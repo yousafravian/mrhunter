@@ -74,68 +74,79 @@ async function notifyCompletion(email) {
 }
 
 async function loginToFacebook(credentials) {
- await delayRandom();
- await navigateToFacebook();
- await delayRandom(); // Simulate delay for human-like interaction
-
- return new Promise(async (resolve, reject) => {
-  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-   const tabId = tabs[0].id;
-   try {
-    await sendAlertMessage(tabId, {
-     action: 'showRunningAlert',
-     message: 'Bot active and running...'
-    });
-
-    chrome.tabs.sendMessage(
-     tabId,
-     { action: 'login', credentials: credentials },
-     (response) => {
-      if (response?.status !== 'action_completed') {
-       console.error('Login failed');
-       reject(new Error('Login failed'));
-       return; // Stop further execution
-      }
-
-      // Add an onUpdated listener for the tab
-      chrome.tabs.onUpdated.addListener(function listener(
-       updatedTabId,
-       changeInfo
-      ) {
-       if (updatedTabId === tabId && changeInfo.status === 'complete') {
-        console.log('Tab has finished updating after login');
-        // Remove the listener to avoid future unnecessary triggers
-        chrome.tabs.onUpdated.removeListener(listener);
-        sendAlertMessage(tabId, {
-         action: 'showRunningAlert',
-         message: 'Login successful. Starting page extraction.'
-        });
-        markDocumentInUse(credentials.email);
-        chrome.tabs.sendMessage(
-         tabId,
-         { action: 'checkCaptcha' },
-         async (response) => {
-          if (response?.status !== 'action_completed')
-           return reject(new Error('captcha detection failed'));
-          if (response?.captchaExists) {
-           await waitForTabUpdate();
-          }
-         }
-        );
-
-        // Resolve the promise
-        resolve();
-       }
+    await delayRandom();
+    await navigateToFacebook();
+    await delayRandom(); // Simulate delay for human-like interaction
+  
+    return new Promise(async (resolve, reject) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+        const tabId = tabs[0].id;
+  
+        try {
+          await sendAlertMessage(tabId, {
+            action: 'showRunningAlert',
+            message: 'Bot active and running...',
+          });
+  
+          chrome.tabs.sendMessage(
+            tabId,
+            { action: 'login', credentials: credentials },
+            async (response) => {
+              if (response?.status !== 'action_completed') {
+                console.error('Login failed');
+                reject(new Error('Login failed'));
+                return; // Stop further execution
+              }
+  
+              // Wait for the tab to finish updating after login
+              console.log('Waiting for tab update after login...');
+              await waitForTabUpdate(tabId);
+              console.log('Tab has finished updating after login.');
+  
+              // Send alert indicating login success and continue
+              await sendAlertMessage(tabId, {
+                action: 'showRunningAlert',
+                message: 'Login successful. Starting page extraction.',
+              });
+  
+              markDocumentInUse(credentials.email);
+  
+              // Check for captcha after the page update
+              chrome.tabs.sendMessage(
+                tabId,
+                { action: 'checkCaptcha' },
+                async (response) => {
+                  if (response?.status !== 'action_completed') {
+                    reject(new Error('Captcha detection failed'));
+                    return;
+                  }
+  
+                  if (response?.captchaExists) {
+                    await sendAlertMessage(tabId, {
+                      action: 'showRunningAlert',
+                      message: 'Captcha detected. Please solve it.',
+                    });
+  
+                    // Wait for the tab to update after captcha is solved
+                    await waitForTabUpdate(tabId);
+                    console.log('Captcha solved and tab updated.');
+                  }
+  
+                  // Resolve the promise once the process completes successfully
+                  resolve();
+                }
+              );
+            }
+          );
+        } catch (error) {
+          console.error('Error logging in to Facebook', error);
+          reject(error);
+        }
       });
-     }
-    );
-   } catch (error) {
-    console.error('Error loggin in to facebook', error);
-    reject(error);
-   }
-  });
- });
-}
+    });
+  }
+  
+  
 
 async function navigateToFacebook() {
  // Simulate navigation action to Facebook
@@ -335,15 +346,13 @@ async function getCredentialByEmail(email) {
 }
 
 async function waitForTabUpdate(tabId) {
- return new Promise((resolve) => {
-  chrome.tabs.onUpdated.addListener(function listener(
-   updatedTabId,
-   changeInfo
-  ) {
-   if (updatedTabId === tabId && changeInfo.status === 'complete') {
-    chrome.tabs.onUpdated.removeListener(listener);
-    resolve();
-   }
-  });
- });
-}
+    return new Promise((resolve) => {
+      chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
+        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+          console.log('Tab updated after captcha input.');
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve(); // Only resolve once the tab update completes
+        }
+      });
+    });
+  }
