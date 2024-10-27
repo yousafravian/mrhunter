@@ -163,85 +163,69 @@ function initializeLinkTracking() {
 }
 
 async function extractDesiredLinks() {
- //helper function to extract profiles
- const extractRecommendsParents = async () => {
-  return new Promise((resolve, reject) => {
+ // Helper function to extract profile links from specific text nodes.
+ const extractRecommendsParents = () => {
+  return new Promise((resolve) => {
    try {
-    // Create a TreeWalker to traverse text nodes
     const walker = document.createTreeWalker(
-     document.body, // Start from the body or a relevant parent node
-     NodeFilter.SHOW_TEXT, // Only consider text nodes
+     document.body,
+     NodeFilter.SHOW_TEXT,
      {
-      // Filter to match "recommends" exactly
-      acceptNode: (node) => {
-       if (node.nodeValue && node.nodeValue.trim() === 'recommends') {
-        return NodeFilter.FILTER_ACCEPT;
-       }
-       return NodeFilter.FILTER_REJECT;
-      }
+      acceptNode: (node) =>
+       node.nodeValue && node.nodeValue.trim() === 'recommends'
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT
      }
     );
 
     const parentElements = [];
-
-    // Collect parent elements of all matching text nodes
     let textNode;
     while ((textNode = walker.nextNode())) {
      parentElements.push(textNode.parentElement);
     }
 
-    if (parentElements.length) {
-     resolve(parentElements); // Resolve with the found elements
-    } else {
-    //  reject(new Error('No matching "recommends" text nodes found.'));
-    resolve(null);
-    }
+    resolve(parentElements.length ? parentElements : null);
    } catch (error) {
-    reject(error); // Handle any unexpected errors
+    console.error('Error during extraction:', error);
+    resolve(null);
    }
   });
  };
- return new Promise(async (resolve, reject) => {
-  const arr = await extractRecommendsParents();
-  if (arr === null) {
-    resolve(null)
-  }
-  const currentExtractedSet = new Set();
-  const newLinks = [];
 
+ try {
+  const arr = await extractRecommendsParents();
+  if (!arr) return null;
+
+  const currentExtractedSet = new Set();
   const profilePattern = /facebook\.com\/profile\.php/;
   const usernamePattern = /facebook\.com\/[a-zA-Z0-9.]+(?=\?|$)/;
 
   arr.forEach((span) => {
    const anchorTag = span.querySelector('a');
+   if (!anchorTag) return;
    let href = anchorTag.href;
    let sanitizedHref;
 
    if (profilePattern.test(href)) {
     const baseUrl = href.split('?')[0];
-    const queryParams = new URLSearchParams(href.split('?')[1]);
-    const id = queryParams.get('id');
-    if (id) {
-     sanitizedHref = `${baseUrl}?id=${id}`;
-    }
+    const id = new URLSearchParams(href.split('?')[1]).get('id');
+    if (id) sanitizedHref = `${baseUrl}?id=${id}`;
    } else if (usernamePattern.test(href)) {
     sanitizedHref = href.split('?')[0];
    }
 
-   if (sanitizedHref) {
-    currentExtractedSet.add(sanitizedHref);
-   }
+   if (sanitizedHref) currentExtractedSet.add(sanitizedHref);
   });
 
-  currentExtractedSet.forEach((link) => {
-   if (!window.allExtractedLinks.has(link)) {
-    newLinks.push(link);
-    window.allExtractedLinks.add(link);
-   }
-  });
-
-  resolve(newLinks);
- });
+  const newLinks = Array.from(currentExtractedSet).filter(
+   (link) => !window.allExtractedLinks.has(link)
+  );
+  newLinks.forEach((link) => window.allExtractedLinks.add(link));
+  return newLinks;
+ } catch (error) {
+  console.error('Error in extractDesiredLinks:', error);
+  return null;
+ }
 }
 
 async function simulateHumanScroll(
@@ -255,55 +239,44 @@ async function simulateHumanScroll(
   scrollTimeout: 2500
  }
 ) {
- return new Promise(async (resolve, reject) => {
-  let lastPosition = -1;
-  let retryCount = 0;
-  const distance = await getRandomNumber(config.minScroll, config.maxScroll);
+ let lastPosition = -1;
+ let retryCount = 0;
 
-  const originDomain = window.location.origin;
-  const xpathQuery = `//a[contains(@href, '${originDomain}') and contains(@href, 'reviews') and @role='tab']`;
-  const reviewsTab = getElementByXPath(xpathQuery);
+ const originDomain = window.location.origin;
+ const reviewsTab = getElementByXPath(
+  `//a[contains(@href, '${originDomain}') and contains(@href, 'reviews') and @role='tab']`
+ );
+ if (reviewsTab) {
+  reviewsTab.click();
+  await delay(4000);
+ }
 
-  if (reviewsTab) {
-   reviewsTab.click();
-   await delay(4000); // Wait for tab content to load
-  }
-
-  async function scrollAndExtract() {
+ async function scrollAndExtract() {
+  while (retryCount < config.maxRetries) {
+   const distance = await getRandomNumber(config.minScroll, config.maxScroll);
    window.scrollBy({ top: distance, left: 0, behavior: 'smooth' });
-   await new Promise((r) => setTimeout(r, config.scrollTimeout));
+   await delay(config.scrollTimeout);
 
    try {
     const newLinks = await extractDesiredLinks();
-    if (newLinks === null) {
-      resolve();
-    }
-    if (newLinks && newLinks.length > 0) {
+    if (newLinks && newLinks.length) {
      const timestamp = new Date().toISOString();
      await addLinksToServer(newLinks, pageLink, timestamp);
      console.log('Newly extracted links:', newLinks);
     }
 
     const currentPosition = window.scrollY;
-
-    // Detect if the page has reached the bottom or is stuck
     if (
      window.innerHeight + window.scrollY >=
      document.body.offsetHeight - 50
     ) {
-     // Ensure content has fully loaded after reaching the bottom
      showTemporaryAlert(
-      'Reached near the bottom of the page. Waiting for content...',
+      'Reached the bottom of the page. Waiting for content...',
       undefined,
       undefined,
       '#008000'
      );
-     console.log(
-      'Reached near bottom of the page. Waiting for potential new content...'
-     );
-     await delay(6000); // Wait for potential dynamic loading
-
-     // Recheck after waiting
+     await delay(6000);
      if (
       window.innerHeight + window.scrollY >=
       document.body.offsetHeight - 50
@@ -314,51 +287,44 @@ async function simulateHumanScroll(
        undefined,
        '#008000'
       );
-      console.log('Reached confirmed bottom of the page.');
       await incrementPagesScraped(credentials.email);
-      await delay(2000); // Additional delay before resolving
-      resolve();
+      await delay(2000);
+      return;
      }
     }
 
     if (currentPosition === lastPosition) {
-     if (retryCount < config.maxRetries) {
-      showTemporaryAlert(
-       'Scroll position stuck, retrying...',
-       undefined,
-       undefined,
-       '#FFA500'
-      );
-      console.log('Scroll position stuck, retrying...');
-      retryCount++;
-      await delay(2000); // Wait before retrying
-      scrollAndExtract(); // Retry scrolling
-     } else {
-      showTemporaryAlert(
-       'Maximum retries reached. Ending extraction.',
-       undefined,
-       undefined,
-       '#FF0000'
-      );
-      console.log('Maximum retries reached, ending extraction.');
-      await incrementPagesScraped(credentials.email);
-      await delay(2000);
-      resolve(); // Exit after retries are exhausted
-     }
+     retryCount++;
+     showTemporaryAlert(
+      `Scroll position stuck, retrying... (${retryCount}/${config.maxRetries})`,
+      undefined,
+      undefined,
+      '#FFA500'
+     );
+     console.log('Scroll position stuck, retrying...');
+     await delay(2000);
     } else {
      lastPosition = currentPosition;
-     await delay(config.delayBetweenScrolls); // Wait before next scroll
-     scrollAndExtract(); // Continue scrolling
+     retryCount = 0;
+     await delay(config.delayBetweenScrolls);
     }
    } catch (error) {
     console.error('Error during scrolling or extraction:', error);
-    reject(error); // Reject the promise on error
+    return;
    }
   }
 
-  // Start scrolling and extracting process
-  scrollAndExtract();
- });
+  showTemporaryAlert(
+   'Maximum retries reached. Ending extraction.',
+   undefined,
+   undefined,
+   '#FF0000'
+  );
+  console.log('Maximum retries reached, ending extraction.');
+  await incrementPagesScraped(credentials.email);
+ }
+
+ await scrollAndExtract();
 }
 
 /**
