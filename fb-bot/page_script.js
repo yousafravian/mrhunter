@@ -19,13 +19,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  }
  if (
   request.action === 'startScraping' &&
-  request.pageLink &&
-  request.credentials
+  request.pageLink
  ) {
   setTimeout(() => {
    initializeLinkTracking();
    showTemporaryAlert('Initiating data extraction', 0, true, '#008000');
-   simulateHumanScroll(request.pageLink, request.credentials)
+   simulateHumanScroll(request.pageLink)
     .then(() => {
      sendResponse({ status: 'action_completed' });
     })
@@ -230,7 +229,6 @@ async function extractDesiredLinks() {
 
 async function simulateHumanScroll(
  pageLink,
- credentials,
  config = {
   minScroll: 1000,
   maxScroll: 2000,
@@ -287,7 +285,7 @@ async function simulateHumanScroll(
        undefined,
        '#008000'
       );
-      await incrementPagesScraped(credentials.email);
+      // await incrementPagesScraped(credentials.email);
       await delay(2000);
       return;
      }
@@ -321,7 +319,7 @@ async function simulateHumanScroll(
    '#FF0000'
   );
   console.log('Maximum retries reached, ending extraction.');
-  await incrementPagesScraped(credentials.email);
+  // await incrementPagesScraped(credentials.email);
  }
 
  await scrollAndExtract();
